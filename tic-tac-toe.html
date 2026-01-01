@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe - Advanced</title>
+    <!-- Tailwind CSS CDN for utility-first styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Poppins for a modern look -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles for body and sections, overriding some Tailwind defaults for consistency */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0f172a; /* bg-slate-900 */
+            color: #f8fafc; /* text-slate-50 */
+        }
+        /* Styling for full-height sections with centering */
+        .section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5rem 2rem;
+        }
+        /* Styling for individual game cells */
+        .cell {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+            background-color: #1e293b; /* bg-slate-800 */
+            border-radius: 0.5rem; /* rounded-md */
+        }
+        /* Hover effect for cells */
+        .cell:hover {
+            background-color: #334155; /* bg-slate-700 */
+        }
+        /* Styling for disabled cells (e.g., during AI turn) */
+        .cell.disabled {
+            cursor: not-allowed;
+        }
+        /* Player X and O specific colors */
+        .player-x { color: #3b82f6; } /* Blue */
+        .player-o { color: #ec4899; } /* Pink */
+        /* Winning cell animation */
+        .winning-cell {
+            background-color: #ca8a04; /* Amber */
+            animation: pulse 1s infinite;
+        }
+        /* Keyframe animation for pulse effect */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 640px) {
+            .cell { font-size: 3rem; }
+            #game-board {
+                width: 90vw;
+                height: 90vw;
+                max-width: 350px;
+                max-height: 350px;
+            }
+        }
+        /* Modal transition animations */
+        .modal-scale-enter { transform: scale(0.95); opacity: 0; }
+        .modal-scale-enter-active { transform: scale(1); opacity: 1; transition: all 300ms; }
+        .modal-scale-leave { transform: scale(1); opacity: 1; }
+        .modal-scale-leave-active { transform: scale(0.95); opacity: 0; transition: all 300ms; }
+
+        /* Custom message box for copy confirmation */
+        #message-box {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #16a34a; /* bg-green-600 */
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 1000;
+        }
+        #message-box.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-50">
+
+    <!-- Header & Navigation -->
+    <header class="bg-slate-900/80 backdrop-blur-sm fixed top-0 left-0 right-0 z-50">
+        <div class="container mx-auto px-4">
+            <nav class="flex items-center justify-between h-20">
+                <!-- Site Title/Logo -->
+                <a href="#hero" class="text-2xl font-bold tracking-wider">TIC TAC TOE</a>
+                <!-- Desktop Navigation Links -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#game" class="hover:text-blue-400 transition-colors">Game Modes</a>
+                    <a href="#leaderboard" class="hover:text-pink-400 transition-colors">Game History</a>
+                    <a href="#instructions" class="hover:text-yellow-400 transition-colors">How to Play</a>
+                </div>
+                <!-- Mobile Play Button -->
+                <a href="#game" class="md:hidden bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Play</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section: Introduction to the game -->
+        <section id="hero" class="section text-center">
+            <h1 class="text-5xl md:text-7xl font-bold mb-4">The Classic, Reimagined</h1>
+            <p class="text-xl md:text-2xl text-slate-300 mb-8">Play against friends, challenge our AI, or compete online.</p>
+            <a href="#game" class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-4 px-10 rounded-lg text-xl transition-transform transform hover:scale-105">
+                Choose Your Challenge
+            </a>
+        </section>
+
+        <!-- Game Section: Where game modes are selected and the game is played -->
+        <section id="game" class="section">
+            <div id="game-container" class="flex flex-col items-center justify-center w-full">
+                
+                <!-- Game Mode Selection UI -->
+                <div id="game-mode-selection" class="text-center">
+                    <h2 class="text-4xl md:text-5xl font-bold mb-8">Choose Your Game Mode</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
+                        <button id="play-friend-btn" class="bg-slate-800 p-8 rounded-lg hover:bg-slate-700 hover:scale-105 transition-all">
+                            <h3 class="text-2xl font-bold mb-2 text-blue-400">Play a Friend</h3>
+                            <p>Two players, one screen. The classic way to play.</p>
+                        </button>
+                        <button id="challenge-ai-btn" class="bg-slate-800 p-8 rounded-lg hover:bg-slate-700 hover:scale-105 transition-all">
+                            <h3 class="text-2xl font-bold mb-2 text-pink-400">Challenge the AI</h3>
+                            <p>Test your skills against our computer opponent.</p>
+                        </button>
+                        <button id="play-online-btn" class="bg-slate-800 p-8 rounded-lg hover:bg-slate-700 hover:scale-105 transition-all">
+                            <h3 class="text-2xl font-bold mb-2 text-yellow-400">Play Online</h3>
+                            <p>Compete with players from around the world.</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI Difficulty Selection UI (hidden by default) -->
+                <div id="ai-difficulty-selection" class="hidden text-center">
+                    <h2 class="text-4xl md:text-5xl font-bold mb-8">Select AI Difficulty</h2>
+                     <div class="flex space-x-4">
+                        <button id="ai-easy-btn" class="bg-green-600 p-4 rounded-lg hover:bg-green-500 transition-colors text-xl font-bold">Easy</button>
+                        <button id="ai-hard-btn" class="bg-red-600 p-4 rounded-lg hover:bg-red-500 transition-colors text-xl font-bold">Hard (Unbeatable)</button>
+                    </div>
+                    <button id="back-to-modes-ai-btn" class="mt-8 text-slate-400 hover:text-white">← Back to Modes</button>
+                </div>
+
+                <!-- Online Game Options UI (hidden by default) -->
+                <div id="online-options" class="hidden text-center">
+                    <h2 class="text-4xl md:text-5xl font-bold mb-8">Play Online</h2>
+                    <div class="space-y-4">
+                        <button id="create-online-game" class="bg-blue-600 w-64 p-4 rounded-lg hover:bg-blue-500 transition-colors text-xl font-bold">Create New Game</button>
+                        <div class="flex items-center justify-center space-x-2">
+                             <input type="text" id="join-game-id" placeholder="Enter Game ID" class="bg-slate-700 text-white p-4 rounded-lg w-40 text-center">
+                             <button id="join-online-game" class="bg-green-600 p-4 rounded-lg hover:bg-green-500 transition-colors font-bold">Join Game</button>
+                        </div>
+                    </div>
+                    <div id="online-user-info" class="mt-6 text-slate-400">Your User ID: <span id="user-id-display" class="font-mono"></span></div>
+                    <button id="back-to-modes-online-btn" class="mt-8 text-slate-400 hover:text-white">← Back to Modes</button>
+                </div>
+
+                <!-- Main Game Board Area (hidden by default) -->
+                <div id="game-board-area" class="hidden flex-col items-center">
+                     <div class="flex justify-between w-full max-w-md items-center mb-4">
+                        <button id="back-to-modes" class="text-slate-400 hover:text-white">← Back</button>
+                        <div id="status" class="text-xl font-semibold h-10 text-slate-300 text-center"></div>
+                        <button id="reset-button" class="text-slate-400 hover:text-white">Reset</button>
+                    </div>
+                    <div id="game-board" class="grid grid-cols-3 grid-rows-3 gap-2 bg-slate-700 p-2 rounded-lg w-[400px] h-[400px]">
+                        <!-- Cells are dynamically generated by JavaScript -->
+                    </div>
+                    <div id="online-game-info" class="mt-4 text-center hidden">
+                        <p class="text-slate-400">Game ID: <span id="online-game-id-display" class="font-mono cursor-pointer" title="Click to copy"></span></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Game History Section: Displays a log of past online games -->
+        <section id="leaderboard" class="section bg-slate-800">
+             <div class="container mx-auto text-center max-w-4xl">
+                <h2 class="text-4xl md:text-5xl font-bold mb-8">Game History</h2>
+                <div class="bg-slate-900 rounded-lg shadow-lg overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-700">
+                            <tr>
+                                <th class="p-4">Game ID / Mode</th>
+                                <th class="p-4">Player X</th>
+                                <th class="p-4">Player O</th>
+                                <th class="p-4 text-center">Winner</th>
+                                <th class="p-4 text-center">Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="game-history-body">
+                           <!-- Game history rows are dynamically populated by JavaScript -->
+                           <tr><td colspan="5" class="text-center p-8">Loading game history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Instructions Section: Explains how to play the game -->
+        <section id="instructions" class="section bg-slate-900">
+            <div class="container mx-auto text-center max-w-4xl">
+                <h2 class="text-4xl md:text-5xl font-bold mb-8">How to Play</h2>
+                <div class="grid md:grid-cols-3 gap-8 text-left">
+                    <div class="bg-slate-800 p-6 rounded-lg"><h3 class="text-2xl font-bold mb-3 text-blue-400">1. The Goal</h3><p class="text-slate-300">Be the first player to get three of your marks in a row—horizontally, vertically, or diagonally.</p></div>
+                    <div class="bg-slate-800 p-6 rounded-lg"><h3 class="text-2xl font-bold mb-3 text-pink-400">2. Taking Turns</h3><p class="text-slate-300">Players alternate placing their marks (X or O) in an empty square on the 3x3 grid. Player X always starts.</p></div>
+                    <div class="bg-slate-800 p-6 rounded-lg"><h3 class="text-2xl font-bold mb-3 text-yellow-400">3. Winning</h3><p class="text-slate-300">If all 9 squares are filled and no one has 3 in a row, the game is a draw. The first to get 3 in a row wins the round!</p></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- End Game Modal: Displays game results (Win/Loss/Draw) -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50 modal-scale-enter">
+        <div class="bg-slate-800 p-8 rounded-xl shadow-2xl text-center">
+            <div id="modal-message" class="text-4xl font-bold mb-6"></div>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <button id="play-again-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-xl transition-colors">
+                    Play Again
+                </button>
+                <button id="close-game-button" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-3 px-8 rounded-lg text-xl transition-colors">
+                    Close Game
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Message Box for notifications (e.g., "Copied to clipboard") -->
+    <div id="message-box" class="hidden"></div>
+    
+    <script type="module">
+        // Firebase imports for authentication and database operations
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, getDocs, serverTimestamp, writeBatch, orderBy, limit, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        // __firebase_config and __app_id are global variables provided by the Canvas environment.
+        // They are used to initialize Firebase and define the application's unique ID.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "...", projectId: "..." };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // --- Initialize Firebase Services ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- Global Game State Variables ---
+        let userId; // Stores the current user's ID
+        let gameMode = null; // 'friend', 'ai', 'online' - determines game type
+        let aiDifficulty = null; // 'easy', 'hard' - for AI mode
+        let onlineGameId = null; // ID of the current online game
+        let onlineGameUnsubscribe = null; // Function to unsubscribe from online game updates
+        let gameHistoryUnsubscribe = null; // Function to unsubscribe from public game history updates
+        let localGameHistoryUnsubscribe = null; // Function to unsubscribe from local game history updates
+
+        let board = ['', '', '', '', '', '', '', '', '']; // The Tic Tac Toe board state
+        let currentPlayer = 'X'; // Current player ('X' or 'O')
+        let isGameActive = true; // Flag to indicate if the game is ongoing
+
+        // Arrays to hold history data from different sources
+        let onlineHistory = [];
+        let localHistory = [];
+        
+        // --- DOM Element References ---
+        // Centralized object to hold references to frequently used DOM elements for efficiency
+        const elements = {
+            gameContainer: document.getElementById('game-container'),
+            gameModeSelection: document.getElementById('game-mode-selection'),
+            aiDifficultySelection: document.getElementById('ai-difficulty-selection'),
+            onlineOptions: document.getElementById('online-options'),
+            gameBoardArea: document.getElementById('game-board-area'),
+            gameBoard: document.getElementById('game-board'),
+            statusDisplay: document.getElementById('status'),
+            modal: document.getElementById('modal'),
+            modalMessage: document.getElementById('modal-message'),
+            playAgainButton: document.getElementById('play-again-button'),
+            closeGameButton: document.getElementById('close-game-button'), // New button reference
+            backToModesButton: document.getElementById('back-to-modes'),
+            resetButton: document.getElementById('reset-button'),
+            createOnlineGameBtn: document.getElementById('create-online-game'),
+            joinOnlineGameBtn: document.getElementById('join-online-game'),
+            joinGameIdInput: document.getElementById('join-game-id'),
+            userIdDisplay: document.getElementById('user-id-display'),
+            onlineGameInfo: document.getElementById('online-game-info'),
+            onlineGameIdDisplay: document.getElementById('online-game-id-display'),
+            gameHistoryBody: document.getElementById('game-history-body'), // Updated ID
+            messageBox: document.getElementById('message-box'), // Added for custom message
+
+            // New element references for game mode selection buttons
+            playFriendBtn: document.getElementById('play-friend-btn'),
+            challengeAiBtn: document.getElementById('challenge-ai-btn'),
+            playOnlineBtn: document.getElementById('play-online-btn'),
+            aiEasyBtn: document.getElementById('ai-easy-btn'),
+            aiHardBtn: document.getElementById('ai-hard-btn'),
+            backToModesAiBtn: document.getElementById('back-to-modes-ai-btn'),
+            backToModesOnlineBtn: document.getElementById('back-to-modes-online-btn'),
+        };
+
+        // Winning conditions for Tic Tac Toe (indices of cells that form a win)
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        // --- UI Navigation Functions ---
+
+        /**
+         * Sets up the game based on the selected mode.
+         * @param {string} mode - 'friend', 'ai', or 'online'.
+         */
+        const setupGame = (mode) => {
+            gameMode = mode;
+            elements.gameModeSelection.classList.add('hidden'); // Hide mode selection
+            if (mode === 'friend') {
+                showGameBoard(); // Directly show board for friend mode
+                startNewGame();
+            } else if (mode === 'ai') {
+                elements.aiDifficultySelection.classList.remove('hidden'); // Show AI difficulty options
+            } else if (mode === 'online') {
+                elements.onlineOptions.classList.remove('hidden'); // Show online game options
+            }
+        };
+
+        /**
+         * Starts an AI game with the selected difficulty.
+         * @param {string} difficulty - 'easy' or 'hard'.
+         */
+        const startAIGame = (difficulty) => {
+            aiDifficulty = difficulty;
+            elements.aiDifficultySelection.classList.add('hidden'); // Hide difficulty selection
+            showGameBoard(); // Show the game board
+            startNewGame();
+        };
+
+        /**
+         * Navigates back to the game mode selection screen.
+         * Cleans up online game listeners if active.
+         */
+        const showGameModeSelection = () => {
+            elements.aiDifficultySelection.classList.add('hidden');
+            elements.onlineOptions.classList.add('hidden');
+            elements.gameBoardArea.classList.add('hidden');
+            elements.gameModeSelection.classList.remove('hidden'); // Show mode selection
+
+            // Unsubscribe from online game updates if active
+            if (onlineGameUnsubscribe) onlineGameUnsubscribe();
+            onlineGameId = null; // Reset online game ID
+            gameMode = null; // Reset game mode
+        };
+        
+        /**
+         * Displays the main game board area.
+         * Creates/updates the board UI.
+         */
+        const showGameBoard = () => {
+            elements.gameBoardArea.classList.remove('hidden');
+            elements.gameBoardArea.classList.add('flex'); // Ensure flex display for centering
+            elements.onlineGameInfo.classList.add('hidden'); // Hide online game info by default
+            createBoardUI(); // Render the board cells
+        };
+
+        // --- Game Logic Functions ---
+
+        /**
+         * Initializes a new game state.
+         * Resets board, current player, and game activity status.
+         */
+        const startNewGame = () => {
+            board = ['', '', '', '', '', '', '', '', '']; // Clear the board
+            currentPlayer = 'X'; // X always starts
+            isGameActive = true; // Game is active
+            updateStatusDisplay(); // Update status message
+            createBoardUI(); // Re-render the board UI
+            // If AI mode and AI is 'O' (second player), make AI move
+            if (gameMode === 'ai' && currentPlayer === 'O') {
+                setTimeout(aiMove, 500); // Delay AI move for better UX
+            }
+        };
+
+        /**
+         * Renders/updates the visual representation of the game board cells.
+         */
+        const createBoardUI = () => {
+            elements.gameBoard.innerHTML = ''; // Clear existing cells
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i; // Store cell index for identification
+                cell.textContent = board[i]; // Display 'X', 'O', or empty
+                // Add player-specific classes for styling
+                if (board[i] === 'X') cell.classList.add('player-x');
+                if (board[i] === 'O') cell.classList.add('player-o');
+                cell.addEventListener('click', handleCellClick); // Attach click listener
+                elements.gameBoard.appendChild(cell); // Add cell to board
+            }
+        };
+
+        /**
+         * Handles a click event on a game cell.
+         * Determines if the move is valid and initiates appropriate game logic.
+         * @param {Event} event - The click event object.
+         */
+        const handleCellClick = (event) => {
+            if (!isGameActive) return; // Do nothing if game is not active
+            const clickedCellIndex = parseInt(event.target.dataset.index);
+
+            // Do nothing if cell is already occupied
+            if (board[clickedCellIndex] !== '') return;
+
+            if (gameMode === 'online') {
+                if (!onlineGameId) return; // Ensure an online game is active
+                makeOnlineMove(clickedCellIndex); // Handle online move
+            } else {
+                makeLocalMove(clickedCellIndex); // Handle local move (friend or AI)
+                if (gameMode === 'ai' && isGameActive && currentPlayer === 'O') {
+                    // Disable board during AI's turn to prevent user input
+                    elements.gameBoard.classList.add('pointer-events-none');
+                    setTimeout(() => {
+                        aiMove(); // Make AI move
+                        elements.gameBoard.classList.remove('pointer-events-none'); // Re-enable board
+                    }, 700); // Delay for AI move
+                }
+            }
+        };
+        
+        /**
+         * Executes a move for local game modes (friend, AI).
+         * Updates board, UI, and checks for game result.
+         * @param {number} index - The index of the cell to mark.
+         */
+        const makeLocalMove = (index) => {
+            board[index] = currentPlayer; // Update board state
+            updateCellUI(index); // Update cell's visual
+            checkResult(); // Check if game ended (win/draw)
+        };
+
+        /**
+         * Updates the visual content and styling of a specific cell.
+         * @param {number} index - The index of the cell to update.
+         */
+        const updateCellUI = (index) => {
+            const cell = elements.gameBoard.querySelector(`[data-index='${index}']`);
+            if (cell) {
+                cell.textContent = board[index]; // Set 'X' or 'O'
+                cell.classList.remove('player-x', 'player-o'); // Remove old player classes
+                if (board[index] === 'X') cell.classList.add('player-x'); // Add new player class
+                if (board[index] === 'O') cell.classList.add('player-o');
+            }
+        };
+
+        /**
+         * Switches the current player from 'X' to 'O' or vice versa.
+         */
+        const changePlayer = () => {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatusDisplay(); // Update status message
+        };
+
+        /**
+         * Checks the current board state for a win or a draw.
+         * Updates game status and shows modal if game ends.
+         * @param {boolean} isOnline - True if checking result for an online game (modal handled by listener).
+         * @returns {string|null} 'win', 'draw', or null if game continues.
+         */
+        const checkResult = (isOnline = false) => {
+            let roundWon = false;
+            let winningCombo = [];
+
+            // Iterate through all winning conditions
+            for (const condition of winningConditions) {
+                const [a, b, c] = condition.map(i => board[i]); // Get values of cells in condition
+                if (a && a === b && a === c) { // Check if all three are the same and not empty
+                    roundWon = true;
+                    winningCombo = condition;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                isGameActive = false; // Game is no longer active
+                // Add winning-cell class to highlight the winning line
+                winningCombo.forEach(index => document.querySelector(`[data-index='${index}']`).classList.add('winning-cell'));
+                if (isOnline) {
+                    // For online games, the modal and score update are handled by the Firestore listener
+                } else {
+                    // For local games, record history and then show modal
+                    recordLocalGameHistory(gameMode, currentPlayer, roundWon ? currentPlayer : 'draw');
+                    showModal(`Player ${currentPlayer} Wins!`); // Show win modal for local games
+                }
+                return 'win';
+            }
+
+            // Check for a draw (no empty cells and no winner)
+            if (!board.includes('')) {
+                isGameActive = false; // Game is no longer active
+                if (!isOnline) {
+                    // For local games, record history and then show modal
+                    recordLocalGameHistory(gameMode, currentPlayer, 'draw');
+                    showModal('Game is a Draw!'); // Show draw modal for local games
+                }
+                return 'draw';
+            }
+            
+            // If no win or draw, change player for local games
+            if (!isOnline) changePlayer();
+            return null; // Game continues
+        };
+
+        /**
+         * Updates the text content of the game status display.
+         */
+        const updateStatusDisplay = () => {
+            if (!isGameActive) return; // Only update if game is active
+            if (gameMode === 'online') {
+                // Online status is managed by the Firestore listener
+            } else {
+                elements.statusDisplay.textContent = `Player ${currentPlayer}'s Turn`;
+            }
+        };
+
+        // --- AI Logic (for 'ai' game mode) ---
+
+        /**
+         * Makes a move for the AI player.
+         * Chooses a move based on selected difficulty ('easy' or 'hard').
+         */
+        const aiMove = () => {
+            if (!isGameActive) return; // AI only moves if game is active
+            let move;
+            if (aiDifficulty === 'easy') {
+                // Easy AI: selects a random empty cell
+                let emptyCells = board.map((val, idx) => val === '' ? idx : null).filter(val => val !== null);
+                move = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            } else {
+                // Hard AI: uses the Minimax algorithm to find the optimal move
+                move = findBestMove(board);
+            }
+            if(move !== undefined) {
+                makeLocalMove(move); // Execute the AI's chosen move
+            }
+        };
+
+        /**
+         * Finds the best move for the AI using the Minimax algorithm.
+         * @param {Array<string>} boardState - The current state of the game board.
+         * @returns {number} The index of the best move.
+         */
+        const findBestMove = (boardState) => {
+            let bestVal = -1000; // Initialize best value to a very low number
+            let bestMove = -1; // Initialize best move index
+            for (let i = 0; i < 9; i++) {
+                if (boardState[i] === '') { // If cell is empty
+                    boardState[i] = 'O'; // Try placing AI's mark ('O')
+                    // Calculate value of this move using minimax (assuming player 'X' will minimize)
+                    let moveVal = minimax(boardState, 0, false);
+                    boardState[i] = ''; // Undo the move
+                    if (moveVal > bestVal) { // If this move is better
+                        bestMove = i; // Update best move
+                        bestVal = moveVal; // Update best value
+                    }
+                }
+            }
+            return bestMove;
+        };
+
+        /**
+         * The Minimax algorithm implementation for Tic Tac Toe.
+         * Recursively explores game states to find the optimal move.
+         * @param {Array<string>} boardState - The current board state.
+         * @param {number} depth - Current depth in the game tree.
+         * @param {boolean} isMax - True if it's the maximizer's (AI's) turn, false for minimizer (Player).
+         * @returns {number} The score of the current game state.
+         */
+        const minimax = (boardState, depth, isMax) => {
+            let score = evaluate(boardState); // Evaluate current board state
+
+            // Base cases: game ended
+            if (score === 10) return score - depth; // AI wins (maximize score, prefer shallower wins)
+            if (score === -10) return score + depth; // Player wins (minimize score, prefer deeper losses)
+            if (!boardState.includes('')) return 0; // Draw
+
+            if (isMax) { // Maximizer's move (AI, 'O')
+                let best = -1000;
+                for (let i = 0; i < 9; i++) {
+                    if (boardState[i] === '') {
+                        boardState[i] = 'O';
+                        best = Math.max(best, minimax(boardState, depth + 1, !isMax));
+                        boardState[i] = '';
+                    }
+                }
+                return best;
+            } else { // Minimizer's move (Player, 'X')
+                let best = 1000;
+                for (let i = 0; i < 9; i++) {
+                    if (boardState[i] === '') {
+                        boardState[i] = 'X';
+                        best = Math.min(best, minimax(boardState, depth + 1, !isMax));
+                        boardState[i] = '';
+                    }
+                }
+                return best;
+            }
+        };
+
+        /**
+         * Evaluates the current board state and returns a score.
+         * @param {Array<string>} b - The board state to evaluate.
+         * @returns {number} 10 if AI wins, -10 if Player wins, 0 otherwise.
+         */
+        const evaluate = (b) => {
+            for (const condition of winningConditions) {
+                const [p1, p2, p3] = condition;
+                if (b[p1] === b[p2] && b[p2] === b[p3]) {
+                    if (b[p1] === 'O') return 10; // AI wins
+                    if (b[p1] === 'X') return -10; // Player wins
+                }
+            }
+            return 0; // No winner
+        };
+
+        // --- Online (Firebase) Logic ---
+
+        /**
+         * Creates a new online game in Firestore.
+         * The creator becomes player 'X'.
+         */
+        const createOnlineGame = async () => {
+            try {
+                // Reference to the 'games' collection within the public data path
+                const gameRef = doc(collection(db, `/artifacts/${appId}/public/data/games`));
+                const newGame = {
+                    board: ['', '', '', '', '', '', '', '', ''], // Initial empty board
+                    players: { 'X': userId }, // Creator is Player X
+                    currentPlayer: 'X', // X starts
+                    status: 'waiting', // Game status: 'waiting', 'active', 'finished'
+                    winner: null,
+                    createdAt: serverTimestamp() // Timestamp for game creation
+                };
+                await setDoc(gameRef, newGame); // Set the new game document
+                onlineGameId = gameRef.id; // Store the new game ID
+                showMessageBox('Game created! Copy ID to share.'); // Notify user
+                joinOnlineGame(onlineGameId); // Automatically join the created game
+            } catch (error) {
+                console.error("Error creating online game:", error);
+                showMessageBox('Failed to create game. Please try again.');
+            }
+        };
+
+        /**
+         * Joins an existing online game using its ID.
+         * @param {string} gameId - The ID of the game to join.
+         */
+        const joinOnlineGame = async (gameId) => {
+            if (!gameId) {
+                showMessageBox("Please enter a Game ID.");
+                return;
+            }
+            const gameRef = doc(db, `/artifacts/${appId}/public/data/games`, gameId);
+            try {
+                const gameSnap = await getDoc(gameRef);
+
+                if (!gameSnap.exists()) {
+                    showMessageBox("Game not found!");
+                    return;
+                }
+
+                const gameData = gameSnap.data();
+                // Check if game is already active and current user is not part of it
+                if (gameData.status === 'active' && !Object.values(gameData.players).includes(userId)) {
+                    showMessageBox("This game is already full.");
+                    return;
+                }
+                
+                // If game is waiting and current user is not Player X, join as Player O
+                if (gameData.status === 'waiting' && gameData.players.X !== userId) {
+                    await updateDoc(gameRef, {
+                        'players.O': userId,
+                        status: 'active' // Change status to active once two players are in
+                    });
+                }
+
+                onlineGameId = gameId; // Store the joined game ID
+                elements.onlineOptions.classList.add('hidden'); // Hide online options
+                showGameBoard(); // Show the game board
+                elements.onlineGameInfo.classList.remove('hidden'); // Show online game info
+                elements.onlineGameIdDisplay.textContent = gameId; // Display game ID
+
+                // Set up real-time listener for game updates
+                if (onlineGameUnsubscribe) onlineGameUnsubscribe(); // Unsubscribe from previous game if any
+                onlineGameUnsubscribe = onSnapshot(gameRef, (doc) => {
+                    if (doc.exists()) {
+                        handleOnlineGameUpdate(doc.data()); // Process game data changes
+                    } else {
+                        // Game document no longer exists (e.g., deleted by host)
+                        showGameModeSelection();
+                        showMessageBox("The game was deleted by the host.");
+                    }
+                }, (error) => {
+                    console.error("Error listening to online game:", error);
+                    showMessageBox("Failed to connect to game. Please try again.");
+                });
+            } catch (error) {
+                console.error("Error joining online game:", error);
+                showMessageBox("Failed to join game. Please check ID and try again.");
+            }
+        };
+
+        /**
+         * Handles real-time updates from an online game document.
+         * Updates the UI and game state based on Firestore data.
+         * @param {object} gameData - The latest game data from Firestore.
+         */
+        const handleOnlineGameUpdate = (gameData) => {
+            if (!gameData) {
+                // This case should be handled by the onSnapshot error callback or doc.exists() check
+                showGameModeSelection();
+                showMessageBox("The game was deleted.");
+                return;
+            }
+            board = gameData.board; // Update local board state
+            currentPlayer = gameData.currentPlayer; // Update current player
+            createBoardUI(); // Re-render the board UI
+
+            const playerMark = gameData.players.X === userId ? 'X' : 'O'; // Determine current user's mark
+            
+            // Update game status display based on online game state
+            if (gameData.status === 'waiting') {
+                elements.statusDisplay.textContent = 'Waiting for opponent...';
+                isGameActive = false; // Game is not active yet
+            } else if (gameData.status === 'active') {
+                isGameActive = true; // Game is active
+                if (currentPlayer === playerMark) {
+                    elements.statusDisplay.textContent = "Your Turn";
+                    elements.gameBoard.classList.remove('pointer-events-none'); // Enable board for user's turn
+                } else {
+                    elements.statusDisplay.textContent = "Opponent's Turn";
+                    elements.gameBoard.classList.add('pointer-events-none'); // Disable board for opponent's turn
+                }
+            } else if (gameData.status === 'finished') {
+                isGameActive = false; // Game is finished
+                checkResult(true); // Call checkResult to highlight winning cells (but not show modal again)
+                if (gameData.winner === 'draw') {
+                    showModal('Game is a Draw!');
+                } else if (gameData.winner === playerMark) {
+                    showModal('You Win!');
+                } else {
+                    showModal('You Lose!');
+                }
+                if (onlineGameUnsubscribe) onlineGameUnsubscribe(); // Stop listening to this game
+            }
+        };
+
+        /**
+         * Sends a move to the Firestore database for an online game.
+         * @param {number} index - The index of the cell where the move is made.
+         */
+        const makeOnlineMove = async (index) => {
+            const gameRef = doc(db, `/artifacts/${appId}/public/data/games`, onlineGameId);
+            try {
+                const gameSnap = await getDoc(gameRef);
+                const gameData = gameSnap.data();
+
+                const playerMark = gameData.players.X === userId ? 'X' : 'O';
+                // Validate move: It's current user's turn and cell is empty
+                if (gameData.currentPlayer !== playerMark || gameData.board[index] !== '') return;
+
+                const newBoard = [...gameData.board];
+                newBoard[index] = playerMark; // Apply the move to the new board state
+                
+                const nextPlayer = playerMark === 'X' ? 'O' : 'X'; // Determine next player
+                const updatePayload = { board: newBoard, currentPlayer: nextPlayer };
+                
+                // Check for win/draw after this move (using a temporary board for evaluation)
+                // Note: The `evaluate` function is designed for AI, so 'O' is maximizer.
+                // We map current player's mark to 'O' for evaluation.
+                const tempBoardForEval = [...newBoard].map(p => {
+                    if (p === playerMark) return 'O'; // Current player is 'O' for evaluation
+                    if (p === (playerMark === 'X' ? 'O' : 'X')) return 'X'; // Opponent is 'X' for evaluation
+                    return '';
+                });
+
+                const result = evaluate(tempBoardForEval); // Evaluate the potential outcome
+                if (result === 10) { // Current player wins (evaluated as 'O' winning)
+                    updatePayload.status = 'finished';
+                    updatePayload.winner = playerMark;
+                    // Update leaderboard stats and record history
+                    await updatePlayerStatsAndHistory(gameData.players.X, gameData.players.O, playerMark);
+                } else if (!newBoard.includes('')) { // Draw (board is full, no winner)
+                    updatePayload.status = 'finished';
+                    updatePayload.winner = 'draw';
+                    // Update leaderboard stats and record history
+                    await updatePlayerStatsAndHistory(gameData.players.X, gameData.players.O, 'draw');
+                }
+                
+                await updateDoc(gameRef, updatePayload); // Update the game document in Firestore
+            } catch (error) {
+                console.error("Error making online move:", error);
+                showMessageBox("Failed to make move. Please try again.");
+            }
+        };
+
+        /**
+         * Updates player win/loss/draw statistics in the leaderboard AND records game history.
+         * Uses a Firestore batch write for atomic updates.
+         * @param {string} playerX - User ID of Player X.
+         * @param {string} playerO - User ID of Player O.
+         * @param {string} winner - 'X', 'O', or 'draw'.
+         */
+        const updatePlayerStatsAndHistory = async (playerX, playerO, winner) => {
+            const batch = writeBatch(db); // Create a new batch for multiple atomic writes
+            const playerXRef = doc(db, `/artifacts/${appId}/public/data/leaderboard`, playerX); // Leaderboard collection
+            const playerORef = doc(db, `/artifacts/${appId}/public/data/leaderboard`, playerO); // Leaderboard collection
+            
+            try {
+                // Fetch current stats for both players
+                const playerXSnap = await getDoc(playerXRef);
+                const playerOSnap = await getDoc(playerORef);
+
+                // Initialize stats if player document doesn't exist
+                const playerXData = playerXSnap.exists() ? playerXSnap.data() : { wins: 0, losses: 0, draws: 0 };
+                const playerOData = playerOSnap.exists() ? playerOSnap.data() : { wins: 0, losses: 0, draws: 0 };
+
+                // Update stats based on game outcome
+                if (winner === 'X') {
+                    playerXData.wins++;
+                    playerOData.losses++;
+                } else if (winner === 'O') {
+                    playerOData.wins++;
+                    playerXData.losses++;
+                } else if (winner === 'draw') {
+                    playerXData.draws++;
+                    playerOData.draws++;
+                }
+
+                // Set (or update) the player documents in the batch
+                batch.set(playerXRef, playerXData, { merge: true }); // Use merge to avoid overwriting other fields
+                batch.set(playerORef, playerOData, { merge: true });
+
+                await batch.commit(); // Commit the batch write for leaderboard stats
+
+                // Record game history separately (not part of the batch for stats)
+                const gameHistoryRef = collection(db, `/artifacts/${appId}/public/data/gameHistory`);
+                await addDoc(gameHistoryRef, {
+                    gameId: onlineGameId,
+                    playerX: playerX,
+                    playerO: playerO,
+                    winner: winner,
+                    timestamp: serverTimestamp(), // Use server timestamp for consistent ordering
+                    type: 'online' // Mark as online game
+                });
+
+            } catch (error) {
+                console.error("Error updating player stats or recording history:", error);
+            }
+        };
+
+        /**
+         * Records the history for a locally played game (Friend or AI mode).
+         * @param {string} mode - The game mode ('friend' or 'ai').
+         * @param {string} winnerPlayer - 'X', 'O' (for friend mode), or the actual winner ('X' or 'O') for AI mode.
+         * @param {string} result - 'X', 'O', or 'draw'.
+         */
+        const recordLocalGameHistory = async (mode, winnerPlayer, result) => {
+            const localHistoryRef = collection(db, `/artifacts/${appId}/users/${userId}/localGameHistory`);
+            let playerXName = "Player X";
+            let playerOName = "Player O";
+
+            if (mode === 'ai') {
+                playerXName = "You";
+                playerOName = "AI";
+            }
+
+            try {
+                await addDoc(localHistoryRef, {
+                    mode: mode,
+                    playerX: playerXName,
+                    playerO: playerOName,
+                    winner: result, // 'X', 'O', or 'draw'
+                    timestamp: serverTimestamp(),
+                    type: 'local' // Mark as local game
+                });
+            } catch (error) {
+                console.error("Error recording local game history:", error);
+                showMessageBox("Failed to save local game history.");
+            }
+        };
+
+        // --- Game History Logic ---
+
+        /**
+         * Sets up real-time listeners for both public (online) and private (local) game history.
+         * Combines and sorts the results for display.
+         */
+        const listenToGameHistory = () => {
+            const publicHistoryRef = collection(db, `/artifacts/${appId}/public/data/gameHistory`);
+            const localHistoryRef = collection(db, `/artifacts/${appId}/users/${userId}/localGameHistory`);
+
+            // Unsubscribe existing listeners to prevent duplicates
+            if (gameHistoryUnsubscribe) gameHistoryUnsubscribe();
+            if (localGameHistoryUnsubscribe) localGameHistoryUnsubscribe();
+
+            // Listener for online games (public history)
+            const qPublic = query(publicHistoryRef, orderBy("timestamp", "desc"), limit(20));
+            gameHistoryUnsubscribe = onSnapshot(qPublic, (snapshot) => {
+                onlineHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateCombinedGameHistoryUI(); // Update UI when online history changes
+            }, (error) => {
+                console.error("Error listening to public game history:", error);
+                // Optionally update UI to show error for public history
+            });
+
+            // Listener for local games (user-specific history)
+            const qLocal = query(localHistoryRef, orderBy("timestamp", "desc"), limit(20));
+            localGameHistoryUnsubscribe = onSnapshot(qLocal, (snapshot) => {
+                localHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateCombinedGameHistoryUI(); // Update UI when local history changes
+            }, (error) => {
+                console.error("Error listening to local game history:", error);
+                // Optionally update UI to show error for local history
+            });
+        };
+
+        /**
+         * Combines online and local game history, sorts them by timestamp, and updates the UI.
+         */
+        const updateCombinedGameHistoryUI = () => {
+            let combinedHistory = [...onlineHistory, ...localHistory];
+            // Sort by timestamp (most recent first)
+            combinedHistory.sort((a, b) => {
+                const timeA = a.timestamp ? a.timestamp.toDate().getTime() : 0;
+                const timeB = b.timestamp ? b.timestamp.toDate().getTime() : 0;
+                return timeB - timeA;
+            });
+            updateGameHistoryUI(combinedHistory); // Call the function to render the table
+        };
+
+        /**
+         * Updates the HTML table displaying the game history.
+         * @param {Array<object>} historyEntries - An array of game history objects (online and local).
+         */
+        const updateGameHistoryUI = (historyEntries) => {
+            elements.gameHistoryBody.innerHTML = ''; // Clear existing rows
+            if (historyEntries.length === 0) {
+                elements.gameHistoryBody.innerHTML = '<tr><td colspan="5" class="text-center p-8">No games recorded yet. Play to add history!</td></tr>';
+                return;
+            }
+            historyEntries.forEach((entry) => {
+                const row = document.createElement('tr');
+                row.classList.add('border-b', 'border-slate-700');
+                // Format timestamp for display
+                const date = entry.timestamp ? new Date(entry.timestamp.toDate()).toLocaleString() : 'N/A';
+
+                // Determine display for Game ID / Mode and Player names
+                let gameIdOrModeDisplay;
+                let playerXDisplay;
+                let playerODisplay;
+
+                if (entry.type === 'online') {
+                    gameIdOrModeDisplay = `${entry.gameId.substring(0, 8)}...`; // Truncate online Game ID
+                    playerXDisplay = `${entry.playerX.substring(0, 8)}...`; // Truncate online Player X ID
+                    playerODisplay = entry.playerO ? `${entry.playerO.substring(0, 8)}...` : 'N/A'; // Truncate online Player O ID
+                } else { // type === 'local'
+                    gameIdOrModeDisplay = entry.mode === 'ai' ? 'AI Game' : 'Local Game';
+                    playerXDisplay = entry.playerX;
+                    playerODisplay = entry.playerO || 'N/A';
+                }
+
+                row.innerHTML = `
+                    <td class="p-4 font-mono text-xs">${gameIdOrModeDisplay}</td>
+                    <td class="p-4 font-mono text-xs">${playerXDisplay}</td>
+                    <td class="p-4 font-mono text-xs">${playerODisplay}</td>
+                    <td class="p-4 text-center font-bold">${entry.winner === 'draw' ? 'Draw' : entry.winner}</td>
+                    <td class="p-4 text-center text-xs">${date}</td>
+                `;
+                elements.gameHistoryBody.appendChild(row);
+            });
+        };
+
+        // --- Modals & Resets ---
+
+        /**
+         * Displays the end-game modal with a given message.
+         * @param {string} message - The message to display (e.g., "Player X Wins!").
+         */
+        const showModal = (message) => {
+            elements.modalMessage.textContent = message;
+            elements.modal.classList.remove('hidden'); // Show modal container
+            elements.modal.classList.remove('modal-scale-enter'); // Reset enter animation
+            elements.modal.classList.add('modal-scale-enter-active'); // Play enter animation
+        };
+
+        /**
+         * Hides the end-game modal.
+         */
+        const hideModal = () => {
+            elements.modal.classList.remove('modal-scale-enter-active'); // Reset active animation
+            elements.modal.classList.add('modal-scale-leave-active'); // Play leave animation
+            // Hide after animation completes
+            setTimeout(() => {
+                elements.modal.classList.add('hidden');
+                elements.modal.classList.remove('modal-scale-leave-active');
+            }, 300);
+        };
+        
+        /**
+         * Resets the current game or navigates back to mode selection.
+         */
+        const resetCurrentGame = () => {
+            hideModal(); // Hide any active modal
+            if (gameMode === 'online') {
+                showGameModeSelection(); // For online, go back to mode selection
+            } else {
+                startNewGame(); // For local games, just restart
+            }
+        };
+
+        /**
+         * Displays a temporary message box at the bottom of the screen.
+         * Used for non-critical notifications like "Copied to clipboard!".
+         * @param {string} message - The message to display.
+         * @param {number} duration - How long to show the message in milliseconds.
+         */
+        const showMessageBox = (message, duration = 2000) => {
+            elements.messageBox.textContent = message;
+            elements.messageBox.classList.remove('hidden');
+            elements.messageBox.classList.add('show');
+
+            setTimeout(() => {
+                elements.messageBox.classList.remove('show');
+                setTimeout(() => {
+                    elements.messageBox.classList.add('hidden');
+                }, 300); // Allow fade-out transition
+            }, duration);
+        };
+
+
+        // --- Event Listeners ---
+        // Add event listeners after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            elements.playFriendBtn.addEventListener('click', () => setupGame('friend'));
+            elements.challengeAiBtn.addEventListener('click', () => setupGame('ai'));
+            elements.playOnlineBtn.addEventListener('click', () => setupGame('online'));
+
+            elements.aiEasyBtn.addEventListener('click', () => startAIGame('easy'));
+            elements.aiHardBtn.addEventListener('click', () => startAIGame('hard'));
+            elements.backToModesAiBtn.addEventListener('click', showGameModeSelection);
+            elements.backToModesOnlineBtn.addEventListener('click', showGameModeSelection);
+
+
+            elements.playAgainButton.addEventListener('click', resetCurrentGame);
+            elements.closeGameButton.addEventListener('click', () => { // New event listener for Close Game button
+                hideModal();
+                showGameModeSelection();
+            });
+            elements.backToModesButton.addEventListener('click', showGameModeSelection);
+            elements.resetButton.addEventListener('click', () => {
+                 // Only reset locally if not an online game (online games reset via Firestore)
+                 if (gameMode !== 'online') startNewGame();
+            });
+            elements.createOnlineGameBtn.addEventListener('click', createOnlineGame);
+            elements.joinOnlineGameBtn.addEventListener('click', () => {
+                joinOnlineGame(elements.joinGameIdInput.value.trim());
+            });
+            elements.onlineGameIdDisplay.addEventListener('click', () => {
+                // Copy game ID to clipboard
+                document.execCommand('copy', false, onlineGameId); // Using execCommand for broader iframe compatibility
+                showMessageBox('Game ID copied to clipboard!');
+            });
+
+            // --- Initialization ---
+            // Firebase Authentication State Listener: Ensures user is authenticated before proceeding.
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid; // Set userId if authenticated
+                    elements.userIdDisplay.textContent = userId; // Display user ID
+                    listenToGameHistory(); // Start listening to game history updates
+                } else {
+                    // If no user, try to sign in with custom token (if provided by Canvas)
+                    // or sign in anonymously.
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Authentication Error:", error);
+                        elements.userIdDisplay.textContent = "Error authenticating";
+                        showMessageBox("Authentication failed. Please refresh.");
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
